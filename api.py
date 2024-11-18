@@ -1,4 +1,6 @@
 import html
+from dataclasses import dataclass
+
 import requests
 from enum import Enum
 
@@ -19,8 +21,8 @@ class HNPathsV0(Enum):
     SHOW_STORIES = HN_V0_URL + "showstories" + DOT_JSON
     JOB_STORIES = HN_V0_URL + "jobstories" + DOT_JSON
     # query
-    USER = HN_V0_URL + "user" + DOT_JSON
-    ITEM = HN_V0_URL + "item" + DOT_JSON
+    USER = HN_V0_URL + "user/"
+    ITEM = HN_V0_URL + "item/"
     # misc
     MAX_ITEM = HN_V0_URL + "maxitem" + DOT_JSON
     UPDATES = HN_V0_URL + "updates" + DOT_JSON
@@ -39,9 +41,27 @@ def clean_html(input_text):
     return html.unescape(input_text).replace("<", "").replace(">", "")
 
 
-def get_stories(type_url=HNPathsV0.TOP_STORIES):
-    resp = requests.get(url=type_url.value)
-    print(resp.json())
+@dataclass
+class Story:
+    id: int
+    title: str
+    url: str | None
+    text: str | None  # alternative to url
 
 
-get_stories()
+def get_stories(type_url=HNPathsV0.TOP_STORIES) -> list[Story]:
+    story_ids = requests.get(url=type_url.value).json()
+
+    # fixme: complete firebase REST API access requires the use of official firebase python API
+
+    stories = []
+    for story_id in story_ids:
+        story_json = requests.get(url=HNPathsV0.ITEM.value + str(story_id)).json()
+        stories.append(Story(id=story_json.id, url=story_json.url, title=story_json.title, text=story_json.text))
+
+    return stories
+
+
+retrieved_stories = get_stories()
+
+print(retrieved_stories)
