@@ -1,8 +1,8 @@
 import html
 from dataclasses import dataclass
+from enum import Enum
 
 import requests
-from enum import Enum
 
 # use for trivial crawling - has all we need to retrieve front-page data
 HN_V0_URL = "https://hacker-news.firebaseio.com/v0/"
@@ -41,6 +41,10 @@ def clean_html(input_text):
     return html.unescape(input_text).replace("<", "").replace(">", "")
 
 
+def gen_item_path(item_id: int):
+    return HNPathsV0.ITEM.value + str(item_id) + ".json"
+
+
 @dataclass
 class Story:
     id: int
@@ -52,16 +56,17 @@ class Story:
 def get_stories(type_url=HNPathsV0.TOP_STORIES) -> list[Story]:
     story_ids = requests.get(url=type_url.value).json()
 
-    # fixme: complete firebase REST API access requires the use of official firebase python API
-
     stories = []
     for story_id in story_ids:
-        story_json = requests.get(url=HNPathsV0.ITEM.value + str(story_id)).json()
-        stories.append(Story(id=story_json.id, url=story_json.url, title=story_json.title, text=story_json.text))
+        story_json = requests.get(url=gen_item_path(story_id)).json()
+
+        stories.append(
+            Story(
+                id=story_json.get("id"),
+                url=story_json.get("url"),
+                title=story_json.get("title"),
+                text=story_json.get("text"),
+            )
+        )
 
     return stories
-
-
-retrieved_stories = get_stories()
-
-print(retrieved_stories)
