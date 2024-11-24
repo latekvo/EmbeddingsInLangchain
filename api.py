@@ -4,6 +4,8 @@ from enum import Enum
 
 import requests
 
+from utils import url_download_text
+
 # use for trivial crawling - has all we need to retrieve front-page data
 HN_V0_URL = "https://hacker-news.firebaseio.com/v0/"
 DOT_JSON = ".json"
@@ -70,8 +72,7 @@ def get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10) -> list[Story]:
         )
 
         if story.url is not None:
-            # todo: populate with web page contents
-            pass
+            story.text = url_download_text(story.url)
 
         stories.append(story)
 

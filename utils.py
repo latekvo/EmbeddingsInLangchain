@@ -1,5 +1,6 @@
 from os.path import exists
 
+from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_core.embeddings import Embeddings
 
@@ -37,3 +38,19 @@ def is_text_junk(text: str):
         if trigger in low_text:
             return True
     return False
+
+
+def url_download_text(url: str) -> str | None:
+    # we expect the document might not be a pdf from PyPDFLoader
+    # and expect that the site might block us from WebBaseLoader
+    # note: both PDF loader, and web loader output a lot of useless warnings to the terminal
+    try:
+        document = PyPDFLoader(url).load()
+    except Exception:
+        try:
+            document = WebBaseLoader(url).load()
+        except Exception as e:
+            print("error downloading:", e)
+            return None
+
+    return document[0].page_content
