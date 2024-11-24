@@ -53,20 +53,26 @@ class Story:
     text: str | None  # alternative to url
 
 
-def get_stories(type_url=HNPathsV0.TOP_STORIES) -> list[Story]:
-    story_ids = requests.get(url=type_url.value).json()
+def get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10) -> list[Story]:
+    story_ids: list[int] = requests.get(url=type_url.value).json()
+
+    story_ids = story_ids[0:max_amount]
 
     stories = []
     for story_id in story_ids:
         story_json = requests.get(url=gen_item_path(story_id)).json()
 
-        stories.append(
-            Story(
-                id=story_json.get("id"),
-                url=story_json.get("url"),
-                title=story_json.get("title"),
-                text=story_json.get("text"),
-            )
+        story = Story(
+            id=story_json.get("id"),
+            url=story_json.get("url"),
+            title=story_json.get("title"),
+            text=story_json.get("text"),
         )
+
+        if story.url is not None:
+            # todo: populate with web page contents
+            pass
+
+        stories.append(story)
 
     return stories
