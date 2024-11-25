@@ -2,6 +2,7 @@ from os.path import exists
 
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_community.vectorstores.faiss import FAISS
+from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
 EMBEDDER_NAME = "placeholder_embedding_model_name"
@@ -40,7 +41,25 @@ def is_text_junk(text: str):
     return False
 
 
-def url_download_text(url: str) -> str | None:
+def remove_characters(text: str, wordlist: list[str], replace_with: str = "") -> str:
+    for word in wordlist:
+        text = "{}".format(replace_with).join(text.split(word))
+    return text
+
+
+def break_text(text: str, max_length: int = 120):
+    lines, line = [], ""
+    for word in text.split():
+        if len(line) + len(word) + 1 > max_length:
+            lines.append(line.strip())
+            line = word
+        else:
+            line += " " + word
+    lines.append(line.strip())
+    return "\n".join(lines)
+
+
+def url_download_document(url: str) -> Document | None:
     # we expect the document might not be a pdf from PyPDFLoader
     # and expect that the site might block us from WebBaseLoader
     # note: both PDF loader, and web loader output a lot of useless warnings to the terminal
@@ -53,4 +72,12 @@ def url_download_text(url: str) -> str | None:
             print("error downloading:", e)
             return None
 
-    return document[0].page_content
+    retrieved_doc = document[0]
+
+    text = document[0].page_content
+    text = remove_characters(text, ["\n"])
+    text = break_text(text)
+
+    retrieved_doc.page_content = text
+
+    return retrieved_doc

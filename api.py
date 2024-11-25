@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from enum import Enum
 
 import requests
+from langchain_core.documents import Document
 
-from utils import url_download_text
+from utils import url_download_document
 
 # use for trivial crawling - has all we need to retrieve front-page data
 HN_V0_URL = "https://hacker-news.firebaseio.com/v0/"
@@ -52,7 +53,8 @@ class Story:
     id: int
     title: str
     url: str | None
-    text: str | None  # alternative to url
+    text: str
+    document: Document  # text storage type with metadata
 
 
 def get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10) -> list[Story]:
@@ -63,16 +65,22 @@ def get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10) -> list[Story]:
     stories = []
     for story_id in story_ids:
         story_json = requests.get(url=gen_item_path(story_id)).json()
+        url = story_json.get("url")
+        text = story_json.get("text")
+
+        if url is not None:
+            document = url_download_document(url)
+            text = document.page_content
+        else:
+            document = Document(text)
 
         story = Story(
             id=story_json.get("id"),
-            url=story_json.get("url"),
+            url=url,
             title=story_json.get("title"),
-            text=story_json.get("text"),
+            text=text,
+            document=document,
         )
-
-        if story.url is not None:
-            story.text = url_download_text(story.url)
 
         stories.append(story)
 

@@ -7,6 +7,7 @@ import math
 
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from api import get_stories
@@ -70,8 +71,8 @@ vector_db = FAISS.from_texts(
 
 text_splitter = RecursiveCharacterTextSplitter(
     separators=["\n\n\n", "\n\n", "\n", ". ", ", ", " ", ""],  # todo: explain or hide
-    chunk_size=4096,  # usually smaller ones are recommended, todo: see what works best for HN
-    chunk_overlap=math.ceil(4096 / 3),  # todo: explain
+    chunk_size=1024,  # todo: see what works best for HN
+    chunk_overlap=math.ceil(1024 / 3),  # todo: explain
     keep_separator=False,
     strip_whitespace=True,
 )
@@ -87,13 +88,32 @@ for story in retrieved_stories:
 
     # split each story into multiple, easy to describe chunks
 
-    chunks = text_splitter.split_text(story.text)
+    text_chunks = text_splitter.split_text(story.text)
+    document_chunks = []
 
-    for chunk in chunks:
+    for chunk in text_chunks:
         if is_text_junk(chunk):
-            chunks.remove(chunk)
+            text_chunks.remove(chunk)
             continue
 
-    if len(chunks) != 0:
-        vector_db.add_texts(texts=chunks, embeddings=embedder)
+        # convert text to Document, to add metadata
+        document_chunk = Document(page_content=chunk)
+        document_chunk.metadata = story.document.metadata
+        document_chunks.append(document_chunk)
+
+    if len(document_chunks) != 0:
+        vector_db.add_documents(documents=document_chunks, embeddings=embedder)
         print("story indexed:", story.title)
+
+while True:
+    # todo maybe: very primitive, might change to nCurses or similar
+    query = input("query: ")
+    result = vector_db.similarity_search(query=query, k=1)[0]
+    print(
+        "result most closely matching the query: \n",
+        result.page_content,
+        "\n source:",
+        result.metadata.get("source"),
+        "\n",
+        result.metadata,
+    )
