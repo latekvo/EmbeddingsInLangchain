@@ -99,6 +99,7 @@ for story in retrieved_stories:
         # convert text to Document, to add metadata
         document_chunk = Document(page_content=chunk)
         document_chunk.metadata = story.document.metadata
+        document_chunk.metadata["hn_title"] = story.title
         document_chunks.append(document_chunk)
 
     if len(document_chunks) != 0:
@@ -112,8 +113,8 @@ while True:
     print(
         "result most closely matching the query: \n",
         result.page_content,
-        "\n source:",
+        "\ntitle:",
+        result.metadata.get("hn_title"),
+        "\nsource:",
         result.metadata.get("source"),
-        "\n",
-        result.metadata,
     )
