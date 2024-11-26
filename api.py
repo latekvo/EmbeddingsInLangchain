@@ -51,10 +51,10 @@ def gen_item_path(item_id: int):
 @dataclass
 class Story:
     id: int
-    title: str
+    document: Document
     url: str | None
+    title: str
     text: str
-    document: Document  # text storage type with metadata
 
 
 def get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10) -> list[Story]:

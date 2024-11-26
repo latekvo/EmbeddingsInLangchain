@@ -5,12 +5,14 @@
 # try doing this in one file, that should make it much easier to read through for presentation's sake
 import math
 
+import faiss
+from langchain_community.docstore import InMemoryDocstore
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from api import get_stories
+from api import get_stories, HNPathsV0
 from utils import is_text_junk
 
 # -=-=-=-
@@ -45,9 +47,7 @@ from utils import is_text_junk
 # showcase how the very same article [side by side]
 # which we couldn't find with imprecise/naive search methods, is found via semantics
 
-# fixme: ollama API deprecation warning
-
-retrieved_stories = get_stories()
+retrieved_stories = get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10)
 
 # init embedder
 
@@ -55,12 +55,21 @@ model = "nomic-embed-text:latest"
 
 embedder = OllamaEmbeddings(model=model, base_url="http://localhost:11434")
 
+# index has to know how many dimensions it'll be storing
+
+embedding_dimensions = len(embedder.embed_query("anything"))
+
+# in FAISS, index controls how the data is structured, how it's de-duplicated, and how it's searched
+
+index_type = faiss.IndexFlatL2(embedding_dimensions)
+
 # init vector db
 
-vector_db = FAISS.from_texts(
-    # this sample text will immediately be converted into an embedding
-    ["You are an embedding model."],
-    embedder,
+vector_db = FAISS(
+    embedding_function=embedder,
+    index=index_type,
+    docstore=InMemoryDocstore(),
+    index_to_docstore_id={},
 )
 
 # note ^
@@ -70,15 +79,14 @@ vector_db = FAISS.from_texts(
 # init text splitter
 
 text_splitter = RecursiveCharacterTextSplitter(
-    separators=["\n\n\n", "\n\n", "\n", ". ", ", ", " ", ""],  # todo: explain or hide
-    chunk_size=1024,  # todo: see what works best for HN
-    chunk_overlap=math.ceil(1024 / 3),  # todo: explain
+    separators=["\n\n\n", "\n\n", "\n", ". ", ", ", " ", ""],
+    chunk_size=4092,  # HN articles tend to be short, better to capture them in their entirety
+    chunk_overlap=math.ceil(4092 / 3),  # 30% overlap
     keep_separator=False,
     strip_whitespace=True,
 )
 
 # embed all the stories
-# todo: in python loops should be avoided, look for a better way
 
 for story in retrieved_stories:
     if story.text is None:
@@ -106,8 +114,8 @@ for story in retrieved_stories:
         vector_db.add_documents(documents=document_chunks, embeddings=embedder)
         print("story indexed:", story.title)
 
+
 while True:
-    # todo maybe: very primitive, might change to nCurses or similar
     query = input("query: ")
     result = vector_db.similarity_search(query=query, k=1)[0]
     print(
