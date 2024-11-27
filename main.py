@@ -51,7 +51,7 @@ retrieved_stories = get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10)
 
 # init embedder
 
-model = "nomic-embed-text:latest"
+model = "mxbai-embed-large:latest"
 
 embedder = OllamaEmbeddings(model=model, base_url="http://localhost:11434")
 
@@ -80,8 +80,8 @@ vector_db = FAISS(
 
 text_splitter = RecursiveCharacterTextSplitter(
     separators=["\n\n\n", "\n\n", "\n", ". ", ", ", " ", ""],
-    chunk_size=4092,  # HN articles tend to be short, better to capture them in their entirety
-    chunk_overlap=math.ceil(4092 / 3),  # 30% overlap
+    chunk_size=1024,  # HN articles tend to be short, better to capture them in their entirety
+    chunk_overlap=math.ceil(1024 / 3),  # 30% overlap
     keep_separator=False,
     strip_whitespace=True,
 )

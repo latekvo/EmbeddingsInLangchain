@@ -72,6 +72,11 @@ def get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10) -> list[Story]:
             document = url_download_document(url)
             text = document.page_content
         else:
+            if text is None:
+                # in rare situations questions are returned by TOP_STORIES request
+                story_ids.remove(story_id)
+                continue
+
             document = Document(text)
 
         story = Story(
