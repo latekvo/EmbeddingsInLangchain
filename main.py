@@ -17,35 +17,12 @@ from utils import is_text_junk
 
 # -=-=-=-
 
-# introduction, overlooked common uses of generative LLMs, for purposes other than text/video/audio generation
+# Introduction to embeddings - the overlooked common uses of LMs other than text/video/audio genAi
 
-# introduction to embeddings
+# A simple embedding workflow for semantic querying through HackerNews API
 
-# "so, let's say we wanted to search through a large data store"
+# -=-=-=-
 
-# as the data source, we'll use articles coming from the HackNews API
-# [separate file as that's not the focus]
-
-# trivial search
-# [separate file as that's not the focus]
-
-# "now here's how embeddings come into play"
-
-# we need an embedding model
-# showcase how any model can be used for this
-# present the technical principal for this happening, how LLM architectures look,
-# how we can extract the last non-decoder layer as the abstract multi-dimensional object
-
-# showcase how we're better off using the faster models, use a faster model
-
-# we also need a database for the embeddings, use FAISS
-
-# just mention we created a small function for adding new embeddings to the db
-
-# process 100 or so articles to the db
-
-# showcase how the very same article [side by side]
-# which we couldn't find with imprecise/naive search methods, is found via semantics
 
 retrieved_stories = get_stories(type_url=HNPathsV0.TOP_STORIES, max_amount=10)
 
@@ -72,10 +49,6 @@ vector_db = FAISS(
     index_to_docstore_id={},
 )
 
-# note ^
-# Embed: "You are an embedding model." -> "summarize text" -> Last non-decoder LM layer is our Vec1
-# Query: "What are you?" -> Embed query -> Vec2 -> Vec2 is similar to Vec1 -> retrieve: "You are an embedding model."
-
 # init text splitter
 
 text_splitter = RecursiveCharacterTextSplitter(
@@ -94,7 +67,7 @@ for story in retrieved_stories:
         print("story unavailable:", story.title)
         continue
 
-    # split each story into multiple, easy to describe chunks
+    # split each story into multiple, easy to embed chunks
 
     text_chunks = text_splitter.split_text(story.text)
     document_chunks = []
@@ -104,7 +77,7 @@ for story in retrieved_stories:
             text_chunks.remove(chunk)
             continue
 
-        # convert text to Document, to add metadata
+        # convert the text to a Document to add metadata
         document_chunk = Document(page_content=chunk)
         document_chunk.metadata = story.document.metadata
         document_chunk.metadata["hn_title"] = story.title
@@ -114,6 +87,7 @@ for story in retrieved_stories:
         vector_db.add_documents(documents=document_chunks, embeddings=embedder)
         print("story indexed:", story.title)
 
+# query through the embeddings
 
 while True:
     query = input("query: ")
